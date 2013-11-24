@@ -457,46 +457,94 @@ namespace Eluant
             }
         }
 
-        private void LoadString(string str)
-        {
-            if (LuaApi.luaL_loadstring(LuaState, str) != 0) {
+		private void LoadString(string str, string name = "")
+		{
+			if (LuaApi.luaL_loadbuffer(LuaState, str, (uint)str.Length, name) != 0)
+			{
 #if USE_KOPILUA
-				var error = LuaApi.lua_tostring(LuaState, -1).ToString(); 
+				var error = LuaApi.lua_tostring(LuaState, -1).ToString();
 #else
 				var error = LuaApi.lua_tostring(LuaState, -1); 
 #endif
 				LuaApi.lua_pop(LuaState, 1);
 
-                throw new LuaException(error);
-            }
-        }
+				throw new LuaException(error);
+			}
+		}
 
-        public LuaVararg DoString(string str)
-        {
-            if (str == null) { throw new ArgumentNullException("str"); }
+		private void LoadString(byte[] bytes, string name = "")
+		{
+			if (LuaApi.luaL_loadbuffer(LuaState, bytes, (uint)bytes.Length, name) != 0)
+			{
+#if USE_KOPILUA
+				var error = LuaApi.lua_tostring(LuaState, -1).ToString();
+#else
+				var error = LuaApi.lua_tostring(LuaState, -1); 
+#endif
+				LuaApi.lua_pop(LuaState, 1);
 
-            CheckDisposed();
+				throw new LuaException(error);
+			}
+		}
 
-            LoadString(str);
+		public LuaVararg DoString(byte[] bytes, string name = "")
+		{
+			if (bytes == null) { throw new ArgumentNullException("bytes"); }
 
-            // Compiled code is on the stack, now call it.
-            return Call(new LuaValue[0]);
-        }
+			CheckDisposed();
 
-        public LuaFunction CompileString(string str)
-        {
-            if (str == null) { throw new ArgumentNullException("str"); }
+			LoadString(bytes, name);
 
-            CheckDisposed();
+			// Compiled code is on the stack, now call it.
+			return Call(new LuaValue[0]);
+		}
 
-            LoadString(str);
+		public LuaVararg DoString(string str, string name = "")
+		{
+			if (str == null) { throw new ArgumentNullException("str"); }
 
-            var fn = Wrap(-1);
+			CheckDisposed();
 
-            LuaApi.lua_pop(LuaState, 1);
+			LoadString(str, name);
 
-            return (LuaFunction)fn;
-        }
+			// Compiled code is on the stack, now call it.
+			return Call(new LuaValue[0]);
+		}
+
+		public LuaFunction CompileString(byte[] bytes, string name = "")
+		{
+			if (bytes == null) { throw new ArgumentNullException("bytes"); }
+
+			CheckDisposed();
+
+			LoadString(bytes, name);
+
+			var fn = Wrap(-1);
+
+			LuaApi.lua_pop(LuaState, 1);
+
+			return (LuaFunction)fn;
+		}
+
+		public LuaFunction CompileString(string str, string name = "")
+		{
+			if (str == null) { throw new ArgumentNullException("str"); }
+
+			CheckDisposed();
+
+			LoadString(str, name);
+
+			var fn = Wrap(-1);
+
+			LuaApi.lua_pop(LuaState, 1);
+
+			return (LuaFunction)fn;
+		}
+
+		public LuaFunction GetFunction(string funcName)
+		{
+			return (LuaFunction)Globals[funcName];
+		}
 
         internal LuaVararg Call(LuaFunction fn, IList<LuaValue> args)
         {
