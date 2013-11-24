@@ -1,10 +1,6 @@
+﻿// IConcurrentCollection.cs
 //
-// LuaNil.cs
-//
-// Author:
-//       Chris Howie <me@chrishowie.com>
-//
-// Copyright (c) 2013 Chris Howie
+// Copyright (c) 2008 Jérémie "Garuma" Laval
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -23,52 +19,22 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
+//
+//
 
+#if NET_4_0 || BOOTSTRAP_NET_4_0 || WINDOWS_PHONE
 using System;
+using System.Collections;
+using System.Collections.Generic;
 
-#if USE_KOPILUA
-using LuaApi = KopiLua.Lua;
-#else
-using LuaApi = LuaNative;
-#endif
-
-namespace Eluant
+namespace System.Collections.Concurrent
 {
-    public sealed class LuaNil : LuaValueType
-    {
-        private static readonly LuaNil instance = new LuaNil();
-
-        public static LuaNil Instance
+        public interface IProducerConsumerCollection<T> : IEnumerable<T>, ICollection, IEnumerable
         {
-            get { return instance; }
+                bool TryAdd (T item);
+                bool TryTake (out T item);
+                T[] ToArray ();
+                void CopyTo (T[] array, int index);
         }
-
-        private LuaNil() { }
-
-        internal override void Push(LuaRuntime runtime)
-        {
-            LuaApi.lua_pushnil(runtime.LuaState);
-        }
-
-        public override bool ToBoolean()
-        {
-            return false;
-        }
-
-        public override double? ToNumber()
-        {
-            return null;
-        }
-
-        public override string ToString()
-        {
-            return "nil";
-        }
-
-        public override bool Equals(LuaValue other)
-        {
-            return other == null || other == this;
-        }
-    }
 }
-
+#endif

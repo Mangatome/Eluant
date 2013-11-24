@@ -1,8 +1,10 @@
 //
 // LuaRuntime.cs
 //
-// Author:
+// Authors:
 //       Chris Howie <me@chrishowie.com>
+//       Dirk Weltz <web@weltz-online.de>
+//       Brice Clocher <contact@cybisoft.net>
 //
 // Copyright (c) 2013 Chris Howie
 //
@@ -33,11 +35,23 @@ using System.Runtime.InteropServices;
 
 namespace Eluant
 {
-    public class LuaRuntime : IDisposable
+#if USE_KOPILUA
+	using LuaApi = KopiLua.Lua;
+	using LuaApi_CFunction = KopiLua.Lua.lua_CFunction;
+	using LuaApi_LuaType = LuaNative.LuaType;
+	using LuaApi_LuaState = KopiLua.Lua.lua_State;
+#else
+	using LuaApi = LuaNative;
+	using LuaApi_CFunction = lua_CFunction;
+	using LuaApi_LuaType = LuaNative.LuaType;
+	using LuaApi_LuaState = IntPtr;
+#endif
+
+	public class LuaRuntime : IDisposable
     {
         protected internal delegate IntPtr LuaAllocator(IntPtr ud, IntPtr ptr, IntPtr osize, IntPtr nsize);
 
-        protected internal IntPtr LuaState { get; private set; }
+		protected internal LuaApi_LuaState LuaState { get; private set; }
 
         // Separate field for the corner case where customAllocator was collected first.
         private bool hasCustomAllocator = false;
@@ -49,9 +63,9 @@ namespace Eluant
         private const string WEAKREFERENCE_METATABLE = "eluant_weakreference";
 
         private const string OPAQUECLROBJECT_METATABLE = "eluant_opaqueclrobject";
-        private LuaApi.lua_CFunction opaqueClrObjectGcCallback;
+        private LuaApi_CFunction opaqueClrObjectGcCallback;
 
-        private LuaApi.lua_CFunction delegateWrapperCallCallback;
+		private LuaApi_CFunction delegateWrapperCallCallback;
 
         private LuaFunction createManagedCallWrapper;
 
@@ -61,13 +75,17 @@ namespace Eluant
         {
             customAllocator = CreateAllocatorDelegate();
 
+#if !USE_KOPILUA
             if (customAllocator != null) {
                 hasCustomAllocator = true;
-                LuaState = LuaApi.lua_newstate(customAllocator, IntPtr.Zero);
+                LuaState = LuaApi.lua_newstate(customAllocator, default(LuaApi_LuaState));
             } else {
+#endif
                 hasCustomAllocator = false;
                 LuaState = LuaApi.luaL_newstate();
-            }
+#if !USE_KOPILUA
+			}
+#endif
 
             Globals = new LuaGlobalsTable(this);
 
@@ -92,13 +110,13 @@ namespace Eluant
 
         protected virtual void PostInitialize() { }
 
-        internal static IntPtr GetMainThread(IntPtr state)
+        internal static LuaApi_LuaState GetMainThread(LuaApi_LuaState state)
         {
             LuaApi.lua_getfield(state, LuaApi.LUA_REGISTRYINDEX, MAIN_THREAD_KEY);
             var mainThread = LuaApi.lua_touserdata(state, -1);
             LuaApi.lua_pop(state, 1);
 
-            return mainThread;
+            return (LuaApi_LuaState)mainThread;
         }
 
         private void Initialize()
@@ -164,7 +182,7 @@ namespace Eluant
         {
             GC.SuppressFinalize(this);
 
-            if (LuaState != IntPtr.Zero) {
+            if (LuaState != default(LuaApi_LuaState)) {
                 if (hasCustomAllocator && Environment.HasShutdownStarted) {
                     // This is the perfect storm.  The CLR is shutting down, and we created the Lua state with a custom
                     // allocator.  The allocator delegate may have already been finalized, which (at least on Mono)
@@ -180,17 +198,17 @@ namespace Eluant
                     //
                     // Consumers should make sure that they dispose Lua runtimes before the CLR begins shutting down to
                     // avoid this scenario.
-                    LuaState = IntPtr.Zero;
+                    LuaState = default(LuaApi_LuaState);
                 } else {
                     LuaApi.lua_close(LuaState);
-                    LuaState = IntPtr.Zero;
+                    LuaState = default(LuaApi_LuaState);
                 }
             }
         }
 
         protected void CheckDisposed()
         {
-            if (LuaState == IntPtr.Zero) {
+            if (LuaState == default(LuaApi_LuaState)) {
                 throw new ObjectDisposedException(GetType().FullName);
             }
         }
@@ -291,11 +309,11 @@ namespace Eluant
 
                 // Get the type of Lua value at this index.
                 LuaApi.lua_rawgeti(LuaState, -1, reference);
-                var type = LuaApi.lua_type(LuaState, -1);
+                var type = (LuaApi_LuaType)LuaApi.lua_type(LuaState, -1);
                 LuaApi.lua_pop(LuaState, 1);
 
                 // If the entry at that slot was nil, it's a valid open slot.
-                if (type == LuaApi.LuaType.Nil) {
+                if (type == LuaApi_LuaType.Nil) {
                     lastReference = reference;
 
                     return reference;
@@ -357,38 +375,38 @@ namespace Eluant
 
         internal LuaValue Wrap(int index)
         {
-            var type = LuaApi.lua_type(LuaState, index);
+            var type = (LuaApi_LuaType)LuaApi.lua_type(LuaState, index);
 
             switch (type) {
-                case LuaApi.LuaType.Nil:
+                case LuaApi_LuaType.Nil:
                     return LuaNil.Instance;
 
-                case LuaApi.LuaType.Boolean:
+                case LuaApi_LuaType.Boolean:
                     return (LuaBoolean)(LuaApi.lua_toboolean(LuaState, index) != 0);
 
-                case LuaApi.LuaType.Number:
+                case LuaApi_LuaType.Number:
                     return (LuaNumber)LuaApi.lua_tonumber(LuaState, index);
 
-                case LuaApi.LuaType.String:
+                case LuaApi_LuaType.String:
                     return (LuaString)LuaApi.lua_tostring(LuaState, index);
 
-                case LuaApi.LuaType.Table:
+                case LuaApi_LuaType.Table:
                     return new LuaTable(this, CreateReference(index));
 
-                case LuaApi.LuaType.Function:
+                case LuaApi_LuaType.Function:
                     return new LuaFunction(this, CreateReference(index));
 
-                case LuaApi.LuaType.LightUserdata:
+                case LuaApi_LuaType.LightUserdata:
                     if (HasMetatable(index, OPAQUECLROBJECT_METATABLE)) {
                         return new LuaOpaqueClrObjectReference(this, CreateReference(index));
                     }
 
                     return new LuaLightUserdata(this, CreateReference(index));
 
-                case LuaApi.LuaType.Userdata:
+                case LuaApi_LuaType.Userdata:
                     return new LuaUserdata(this, CreateReference(index));
 
-                case LuaApi.LuaType.Thread:
+                case LuaApi_LuaType.Thread:
                     return new LuaThread(this, CreateReference(index));
             }
 
@@ -414,7 +432,7 @@ namespace Eluant
         internal void DisposeReference(int reference, bool isExplicit)
         {
             // If the Lua state is gone then this is a successful no-op.
-            if (LuaState == IntPtr.Zero) { return; }
+            if (LuaState == default(LuaApi_LuaState)) { return; }
 
             if (isExplicit) {
                 // If Dispose() was called then assume that there is no contention for the Lua runtime.
@@ -442,8 +460,12 @@ namespace Eluant
         private void LoadString(string str)
         {
             if (LuaApi.luaL_loadstring(LuaState, str) != 0) {
-                var error = LuaApi.lua_tostring(LuaState, -1);
-                LuaApi.lua_pop(LuaState, 1);
+#if USE_KOPILUA
+				var error = LuaApi.lua_tostring(LuaState, -1).ToString(); 
+#else
+				var error = LuaApi.lua_tostring(LuaState, -1); 
+#endif
+				LuaApi.lua_pop(LuaState, 1);
 
                 throw new LuaException(error);
             }
@@ -522,7 +544,11 @@ namespace Eluant
                     OnEnterClr();
 
                     // Finally block will take care of popping the error message.
-                    throw new LuaException(LuaApi.lua_tostring(LuaState, -1));
+#if USE_KOPILUA
+					throw new LuaException(LuaApi.lua_tostring(LuaState, -1).ToString()); 
+#else
+					throw new LuaException(LuaApi.lua_tostring(LuaState, -1)); 
+#endif
                 }
                 needEnterClr = false;
                 OnEnterClr();
@@ -586,7 +612,7 @@ namespace Eluant
             // This test can fail if we are on a Lua thread, since we will be using the wrong Lua state.  In practice we
             // should have already checked to make sure we are not on a different Lua thread, but this is here as an
             // additional safeguard since there are potential security implications if things go wrong here.
-            if (LuaApi.lua_type(LuaState, index) == LuaApi.LuaType.LightUserdata) {
+            if (LuaApi.lua_type(LuaState, index) == (int)LuaApi_LuaType.LightUserdata) {
                 LuaApi.lua_getmetatable(LuaState, index);
                 LuaApi.luaL_getmetatable(LuaState, OPAQUECLROBJECT_METATABLE);
 
@@ -616,7 +642,7 @@ namespace Eluant
             return (LuaOpaqueClrObjectReference)wrap;
         }
 
-        private int OpaqueClrObjectGcCallback(IntPtr state)
+		private int OpaqueClrObjectGcCallback(LuaApi_LuaState state)
         {
             // Don't CheckDisposed() here... we were called from Lua, so lua_close() could not have been called yet.
 
@@ -659,7 +685,7 @@ namespace Eluant
             return (LuaTable)wrap;
         }
 
-        private int DelegateWrapperCallCalback(IntPtr state)
+        private int DelegateWrapperCallCalback(LuaApi_LuaState state)
         {
             // We need to do this check as early as possible to avoid using the wrong state pointer.
             if (state != GetMainThread(state)) {
@@ -702,7 +728,7 @@ namespace Eluant
             }
         }
 
-        private int MakeManagedCall(IntPtr state, Delegate d)
+        private int MakeManagedCall(LuaApi_LuaState state, Delegate d)
         {
             var toDispose = new List<IDisposable>();
 
@@ -746,11 +772,11 @@ namespace Eluant
                     for (int i = 0; i < parms.Length; ++i) {
                         var ptype = parms[i].ParameterType;
 
-                        var luaType = i >= nargs ? LuaApi.LuaType.None : LuaApi.lua_type(state, i + 1);
+                        var luaType = i >= nargs ? LuaApi_LuaType.None : (LuaApi_LuaType)LuaApi.lua_type(state, i + 1);
 
                         switch (luaType) {
-                            case LuaApi.LuaType.None:
-                            case LuaApi.LuaType.Nil:
+                            case LuaApi_LuaType.None:
+                            case LuaApi_LuaType.Nil:
                                 // Omitted/nil argument.
                                 if (parms[i].IsOptional) {
                                     args[i] = parms[i].DefaultValue;
@@ -761,7 +787,7 @@ namespace Eluant
                                 }
                                 break;
 
-                            case LuaApi.LuaType.Boolean:
+                            case LuaApi_LuaType.Boolean:
                                 // Bool means bool.
                                 if (!ptype.IsAssignableFrom(typeof(bool))) {
                                     throw new LuaException(string.Format("Argument {0}: Cannot be bool.", i + 1));
@@ -770,7 +796,7 @@ namespace Eluant
                                 args[i] = LuaApi.lua_toboolean(state, i + 1) != 0;
                                 break;
 
-                            case LuaApi.LuaType.Function:
+                            case LuaApi_LuaType.Function:
                                 if (!ptype.IsAssignableFrom(typeof(LuaFunction))) {
                                     throw new LuaException(string.Format("Argument {0}: Cannot be a function.", i + 1));
                                 }
@@ -779,7 +805,7 @@ namespace Eluant
                                 toDispose.Add(wrapped);
                                 break;
 
-                            case LuaApi.LuaType.LightUserdata:
+                            case LuaApi_LuaType.LightUserdata:
                                 // With opaque CLR objects, we have ambiguity.  We could test if the parameter type is
                                 // compatible with LuaLightUserdata first, and if so wrap the Lua object.  But, perhaps the
                                 // opaque object IS a LuaLightUserdata instance?  There's really no way to be smart in that
@@ -797,15 +823,19 @@ namespace Eluant
                                 }
                                 break;
 
-                            case LuaApi.LuaType.Number:
+                            case LuaApi_LuaType.Number:
                                 try {
-                                    args[i] = Convert.ChangeType(LuaApi.lua_tonumber(state, i + 1), ptype);
+#if WINDOWS_PHONE
+									args[i] = Convert.ChangeType(LuaApi.lua_tonumber(state, i + 1), ptype, System.Globalization.CultureInfo.CurrentCulture); 
+#else
+									args[i] = Convert.ChangeType(LuaApi.lua_tonumber(state, i + 1), ptype); 
+#endif
                                 } catch {
                                     throw new LuaException(string.Format("Argument {0}: Cannot be a number.", i + 1));
                                 }
                                 break;
 
-                            case LuaApi.LuaType.String:
+                            case LuaApi_LuaType.String:
                                 if (!ptype.IsAssignableFrom(typeof(string))) {
                                     throw new LuaException(string.Format("Argument {0}: Cannot be a string.", i + 1));
                                 }
@@ -813,7 +843,7 @@ namespace Eluant
                                 args[i] = LuaApi.lua_tostring(state, i + 1);
                                 break;
 
-                            case LuaApi.LuaType.Table:
+                            case LuaApi_LuaType.Table:
                                 if (!ptype.IsAssignableFrom(typeof(LuaTable))) {
                                     throw new LuaException(string.Format("Argument {0}: Cannot be a table.", i + 1));
                                 }
@@ -822,7 +852,7 @@ namespace Eluant
                                 toDispose.Add(wrapped);
                                 break;
 
-                            case LuaApi.LuaType.Thread:
+                            case LuaApi_LuaType.Thread:
                                 if (!ptype.IsAssignableFrom(typeof(LuaThread))) {
                                     throw new LuaException(string.Format("Argument {0}: Cannot be a thread.", i + 1));
                                 }
@@ -831,7 +861,7 @@ namespace Eluant
                                 toDispose.Add(wrapped);
                                 break;
 
-                            case LuaApi.LuaType.Userdata:
+                            case LuaApi_LuaType.Userdata:
                                 if (!ptype.IsAssignableFrom(typeof(LuaUserdata))) {
                                     throw new LuaException(string.Format("Argument {0}: Cannot be userdata.", i + 1));
                                 }
@@ -948,7 +978,11 @@ namespace Eluant
             }
 
             try {
-                return (LuaNumber)(double)Convert.ChangeType(obj, typeof(double));
+#if WINDOWS_PHONE
+				return (LuaNumber)(double)Convert.ChangeType(obj, typeof(double), System.Globalization.CultureInfo.CurrentCulture); 
+#else
+				return (LuaNumber)(double)Convert.ChangeType(obj, typeof(double)); 
+#endif
             } catch { }
 
             if (permitBox) {

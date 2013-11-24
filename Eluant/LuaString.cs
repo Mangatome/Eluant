@@ -26,6 +26,12 @@
 
 using System;
 
+#if USE_KOPILUA
+using LuaApi = KopiLua.Lua;
+#else
+using LuaApi = LuaNative;
+#endif
+
 namespace Eluant
 {
     public sealed class LuaString : LuaValueType,
@@ -68,8 +74,19 @@ namespace Eluant
 
         internal override void Push(LuaRuntime runtime)
         {
-            LuaApi.lua_pushlstring(runtime.LuaState, Value, new UIntPtr((ulong)Value.Length));
+#if USE_KOPILUA
+			LuaApi.lua_pushstring(runtime.LuaState, Value);
+#else
+			LuaApi.lua_pushlstring(runtime.LuaState, Value, new UIntPtr((ulong)Value.Length)); 
+#endif
         }
+
+#if USE_KOPILUA
+		public static implicit operator LuaString(KopiLua.Lua.CharPtr cp)
+		{
+			return cp == null ? null : new LuaString(cp.ToString());
+		} 
+#endif
 
         public static implicit operator LuaString(string v)
         {

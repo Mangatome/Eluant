@@ -5,12 +5,12 @@
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProductVersion>10.0.20506</ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
-    <ProjectGuid>{C389118D-8F19-4C8D-9493-DAD568BA2E7A}</ProjectGuid>
+    <ProjectGuid>{515D8F8A-3EC7-4259-BACE-654B6306B273}</ProjectGuid>
     <ProjectTypeGuids>{C089C8C0-30E0-4E22-80C0-CE093F111A43};{fae04ec0-301f-11d3-bf4b-00c04f79efbc}</ProjectTypeGuids>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Eluant_wp7</RootNamespace>
-    <AssemblyName>Eluant-wp7</AssemblyName>
+    <RootNamespace>mcs_wp7</RootNamespace>
+    <AssemblyName>mcs-wp7</AssemblyName>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <SilverlightVersion>$(TargetFrameworkVersion)</SilverlightVersion>
     <TargetFrameworkProfile>WindowsPhone71</TargetFrameworkProfile>
@@ -24,7 +24,7 @@
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
     <OutputPath>Bin\Debug</OutputPath>
-    <DefineConstants>TRACE;DEBUG;SILVERLIGHT;WINDOWS_PHONE;USE_KOPILUA</DefineConstants>
+    <DefineConstants>DEBUG;TRACE;SILVERLIGHT;WINDOWS_PHONE</DefineConstants>
     <NoStdLib>true</NoStdLib>
     <NoConfig>true</NoConfig>
     <ErrorReport>prompt</ErrorReport>
@@ -49,45 +49,10 @@
     <Reference Include="mscorlib.extensions" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="AssemblyInfo.cs" />
-    <Compile Include="LuaNative.cs">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="LuaBoolean.cs" />
-    <Compile Include="LuaException.cs" />
-    <Compile Include="LuaFunction.cs" />
-    <Compile Include="LuaGlobalsTable.cs" />
-    <Compile Include="LuaLightUserdata.cs" />
-    <Compile Include="LuaNil.cs" />
-    <Compile Include="LuaNumber.cs" />
-    <Compile Include="LuaNumberOperators.cs" />
-    <Compile Include="LuaOpaqueClrObject.cs" />
-    <Compile Include="LuaOpaqueClrObjectReference.cs" />
-    <Compile Include="LuaReference.cs" />
-    <Compile Include="LuaRuntime.cs" />
-    <Compile Include="LuaString.cs" />
-    <Compile Include="LuaTable.cs" />
-    <Compile Include="LuaThread.cs" />
-    <Compile Include="LuaUserdata.cs" />
-    <Compile Include="LuaValue.cs" />
-    <Compile Include="LuaValueExtensions.cs" />
-    <Compile Include="LuaValueType.cs" />
-    <Compile Include="LuaVararg.cs" />
-    <Compile Include="LuaWeakReference.cs" />
-    <Compile Include="Scripts.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <EmbeddedResource Include="BindingSupport.lua" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\..\..\..\..\Desktop\WP Wherigo Player\KopiLua-fd01e1094246498dbe22180f3f60019540e18f76\KopiLua\KopiLua-wp7.csproj">
-      <Project>{330E0C63-4160-46E0-BBDA-325185A4AB7A}</Project>
-      <Name>KopiLua-wp7</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\MonoClassLibraries\mcs-wp7.csproj">
-      <Project>{515D8F8A-3EC7-4259-BACE-654B6306B273}</Project>
-      <Name>mcs-wp7</Name>
-    </ProjectReference>
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="System\Collections\Concurrent\ConcurrentQueue.cs" />
+    <Compile Include="System\Collections\Concurrent\IProducerConsumer.cs" />
+    <Compile Include="System\Collections\Generic\HashSet.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath)\Microsoft\Silverlight for Phone\$(TargetFrameworkVersion)\Microsoft.Silverlight.$(TargetFrameworkProfile).Overrides.targets" />
   <Import Project="$(MSBuildExtensionsPath)\Microsoft\Silverlight for Phone\$(TargetFrameworkVersion)\Microsoft.Silverlight.CSharp.targets" />

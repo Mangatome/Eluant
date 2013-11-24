@@ -26,6 +26,12 @@
 
 using System;
 
+#if USE_KOPILUA
+using LuaApi = KopiLua.Lua;
+#else
+using LuaApi = LuaNative;
+#endif
+
 namespace Eluant
 {
     public sealed class LuaOpaqueClrObjectReference : LuaLightUserdata
