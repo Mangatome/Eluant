@@ -3,6 +3,8 @@
 //
 // Author:
 //       Chris Howie <me@chrishowie.com>
+//       Dirk Weltz <web@weltz-online.de>
+//       Brice Clocher <contact@cybisoft.net>
 //
 // Copyright (c) 2013 Chris Howie
 //
@@ -32,7 +34,7 @@ using System.Linq;
 namespace Eluant
 {
 #if USE_KOPILUA
-	using LuaApi = KopiLua.Lua;
+	using LuaApi = KopiLuaWrapper;
 	using LuaApi_LuaType = LuaNative.LuaType;
 #else
 	using LuaApi = LuaNative;

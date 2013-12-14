@@ -9,7 +9,7 @@
     <ProjectTypeGuids>{C089C8C0-30E0-4E22-80C0-CE093F111A43};{fae04ec0-301f-11d3-bf4b-00c04f79efbc}</ProjectTypeGuids>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Eluant_wp7</RootNamespace>
+    <RootNamespace>Eluant</RootNamespace>
     <AssemblyName>Eluant-wp7</AssemblyName>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <SilverlightVersion>$(TargetFrameworkVersion)</SilverlightVersion>
@@ -50,6 +50,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AssemblyInfo.cs" />
+    <Compile Include="KopiLuaWrapper.cs" />
     <Compile Include="LuaNative.cs">
       <SubType>Code</SubType>
     </Compile>
@@ -80,7 +81,7 @@
     <EmbeddedResource Include="BindingSupport.lua" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\..\..\..\Desktop\WP Wherigo Player\KopiLua-fd01e1094246498dbe22180f3f60019540e18f76\KopiLua\KopiLua-wp7.csproj">
+    <ProjectReference Include="..\..\..\NLua\NLua\Core\KopiLua\KopiLua\KopiLua-wp7.csproj">
       <Project>{330E0C63-4160-46E0-BBDA-325185A4AB7A}</Project>
       <Name>KopiLua-wp7</Name>
     </ProjectReference>

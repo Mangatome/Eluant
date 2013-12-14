@@ -5,7 +5,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Eluant-wp7", "Eluant\Eluant
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "mcs-wp7", "MonoClassLibraries\mcs-wp7.csproj", "{515D8F8A-3EC7-4259-BACE-654B6306B273}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KopiLua-wp7", "..\..\..\..\Desktop\WP Wherigo Player\KopiLua-fd01e1094246498dbe22180f3f60019540e18f76\KopiLua\KopiLua-wp7.csproj", "{330E0C63-4160-46E0-BBDA-325185A4AB7A}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KopiLua-wp7", "..\..\NLua\NLua\Core\KopiLua\KopiLua\KopiLua-wp7.csproj", "{330E0C63-4160-46E0-BBDA-325185A4AB7A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

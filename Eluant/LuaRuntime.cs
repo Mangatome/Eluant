@@ -36,13 +36,13 @@ using System.Runtime.InteropServices;
 namespace Eluant
 {
 #if USE_KOPILUA
-	using LuaApi = KopiLua.Lua;
-	using LuaApi_CFunction = KopiLua.Lua.lua_CFunction;
+	using LuaApi = KopiLuaWrapper;
+	using LuaApi_CFunction = KopiLua.LuaNativeFunction;
 	using LuaApi_LuaType = LuaNative.LuaType;
-	using LuaApi_LuaState = KopiLua.Lua.lua_State;
+	using LuaApi_LuaState = KopiLua.LuaState;
 #else
 	using LuaApi = LuaNative;
-	using LuaApi_CFunction = lua_CFunction;
+	using LuaApi_CFunction = Eluant.LuaNative.lua_CFunction;
 	using LuaApi_LuaType = LuaNative.LuaType;
 	using LuaApi_LuaState = IntPtr;
 #endif
@@ -459,13 +459,10 @@ namespace Eluant
 
 		private void LoadString(string str, string name = "")
 		{
-			if (LuaApi.luaL_loadbuffer(LuaState, str, (uint)str.Length, name) != 0)
+			if (LuaApi.luaL_loadbuffer(LuaState, str, str.Length, name) != 0)
 			{
-#if USE_KOPILUA
-				var error = LuaApi.lua_tostring(LuaState, -1).ToString();
-#else
 				var error = LuaApi.lua_tostring(LuaState, -1); 
-#endif
+
 				LuaApi.lua_pop(LuaState, 1);
 
 				throw new LuaException(error);
@@ -474,13 +471,9 @@ namespace Eluant
 
 		private void LoadString(byte[] bytes, string name = "")
 		{
-			if (LuaApi.luaL_loadbuffer(LuaState, bytes, (uint)bytes.Length, name) != 0)
+			if (LuaApi.luaL_loadbuffer(LuaState, bytes, bytes.Length, name) != 0)
 			{
-#if USE_KOPILUA
-				var error = LuaApi.lua_tostring(LuaState, -1).ToString();
-#else
-				var error = LuaApi.lua_tostring(LuaState, -1); 
-#endif
+				var error = LuaApi.lua_tostring(LuaState, -1);
 				LuaApi.lua_pop(LuaState, 1);
 
 				throw new LuaException(error);
@@ -541,11 +534,6 @@ namespace Eluant
 			return (LuaFunction)fn;
 		}
 
-		public LuaFunction GetFunction(string funcName)
-		{
-			return (LuaFunction)Globals[funcName];
-		}
-
         internal LuaVararg Call(LuaFunction fn, IList<LuaValue> args)
         {
             if (fn == null) { throw new ArgumentNullException("fn"); }
@@ -592,11 +580,7 @@ namespace Eluant
                     OnEnterClr();
 
                     // Finally block will take care of popping the error message.
-#if USE_KOPILUA
-					throw new LuaException(LuaApi.lua_tostring(LuaState, -1).ToString()); 
-#else
 					throw new LuaException(LuaApi.lua_tostring(LuaState, -1)); 
-#endif
                 }
                 needEnterClr = false;
                 OnEnterClr();
@@ -646,7 +630,11 @@ namespace Eluant
 
         internal void PushOpaqueClrObject(object obj)
         {
-            LuaApi.lua_pushlightuserdata(LuaState, (IntPtr)GCHandle.Alloc(obj));
+#if WINDOWS_PHONE
+            LuaApi.lua_pushlightuserdata(LuaState, obj); 
+#else
+            LuaApi.lua_pushlightuserdata(LuaState, (IntPtr)GCHandle.Alloc(obj)); 
+#endif
             LuaApi.luaL_getmetatable(LuaState, OPAQUECLROBJECT_METATABLE);
             LuaApi.lua_setmetatable(LuaState, -2);
         }
@@ -660,7 +648,7 @@ namespace Eluant
             // This test can fail if we are on a Lua thread, since we will be using the wrong Lua state.  In practice we
             // should have already checked to make sure we are not on a different Lua thread, but this is here as an
             // additional safeguard since there are potential security implications if things go wrong here.
-            if (LuaApi.lua_type(LuaState, index) == (int)LuaApi_LuaType.LightUserdata) {
+            if (LuaApi.lua_type(LuaState, index) == LuaApi_LuaType.LightUserdata) {
                 LuaApi.lua_getmetatable(LuaState, index);
                 LuaApi.luaL_getmetatable(LuaState, OPAQUECLROBJECT_METATABLE);
 
@@ -669,8 +657,13 @@ namespace Eluant
                 LuaApi.lua_pop(LuaState, 2);
 
                 if (hasCorrectMetatable) {
-                    var handle = (GCHandle)LuaApi.lua_touserdata(LuaState, index);
-                    return handle.Target;
+#if WINDOWS_PHONE
+                    return LuaApi.lua_touserdata(LuaState, index);
+#else
+                    var handle = LuaApi.lua_touserdata(LuaState, index);
+					GCHandle gc = GCHandle.FromIntPtr((IntPtr)handle);
+                    return gc.Target; 
+#endif
                 }
             }
 
@@ -694,8 +687,10 @@ namespace Eluant
         {
             // Don't CheckDisposed() here... we were called from Lua, so lua_close() could not have been called yet.
 
-            var handle = (GCHandle)LuaApi.lua_touserdata(state, 1);
-            handle.Free();
+#if !WINDOWS_PHONE
+            var handle = (IntPtr)LuaApi.lua_touserdata(state, 1);
+            GCHandle.FromIntPtr(handle).Free(); 
+#endif
 
             return 0;
         }

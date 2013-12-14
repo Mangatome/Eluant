@@ -3,6 +3,8 @@
 //
 // Author:
 //       Chris Howie <me@chrishowie.com>
+//       Dirk Weltz <web@weltz-online.de>
+//       Brice Clocher <contact@cybisoft.net>
 //
 // Copyright (c) 2013 Chris Howie
 //
@@ -26,14 +28,14 @@
 
 using System;
 
-#if USE_KOPILUA
-using LuaApi = KopiLua.Lua;
-#else
-using LuaApi = LuaNative;
-#endif
-
 namespace Eluant
 {
+    #if USE_KOPILUA
+        using LuaApi = KopiLuaWrapper;
+    #else
+        using LuaApi = LuaNative;
+    #endif
+    
     public sealed class LuaString : LuaValueType,
         IEquatable<LuaString>, IEquatable<string>,
         IComparable, IComparable<LuaString>, IComparable<string>
@@ -82,7 +84,7 @@ namespace Eluant
         }
 
 #if USE_KOPILUA
-		public static implicit operator LuaString(KopiLua.Lua.CharPtr cp)
+		public static implicit operator LuaString(KopiLua.CharPtr cp)
 		{
 			return cp == null ? null : new LuaString(cp.ToString());
 		} 
