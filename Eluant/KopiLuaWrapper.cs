@@ -168,7 +168,7 @@ namespace Eluant
         {
             CharPtr cp = Lua.LuaToString(state, idx);
 
-            return cp == null ? null : cp.ToString();
+            return cp == null ? null : cp.ToString(cp.chars.Length - 1);
         }
 
         internal static int lua_gettop(KopiLua.LuaState state)
